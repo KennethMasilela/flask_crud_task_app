@@ -5,7 +5,7 @@
 {% block content %}
 <h2 class="mb-4 text-center">Task Manager</h2>
 
-<!-- ✅ Welcome message for logged-in user -->
+<!--Welcome message for logged-in user -->
 {% if session.get('username') %}
   <div class="d-flex justify-content-between align-items-center mb-3">
     <p class="mb-0">👋 Welcome, <strong>{{ session['username'] }}</strong>!</p>
@@ -26,7 +26,7 @@
   {% endif %}
 {% endwith %}
 
-<!-- ✅ Section header -->
+<!-- Section header -->
 <h4 class="mt-4 mb-3">📝 Add a New Task</h4>
 
 <!-- Add Task Form -->
