@@ -1,0 +1,211 @@
+{% extends "base.html" %}
+
+{% block title %}Task Manager{% endblock %}
+
+{% block content %}
+<h2 class="mb-4 text-center">Task Manager</h2>
+
+<!-- ✅ Welcome message for logged-in user -->
+{% if session.get('username') %}
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <p class="mb-0">👋 Welcome, <strong>{{ session['username'] }}</strong>!</p>
+    <a href="{{ url_for('logout') }}" class="btn btn-outline-danger btn-sm">Logout</a>
+  </div>
+{% endif %}
+
+
+<!-- Flash messages -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    {% for category, message in messages %}
+      <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    {% endfor %}
+  {% endif %}
+{% endwith %}
+
+<!-- ✅ Section header -->
+<h4 class="mt-4 mb-3">📝 Add a New Task</h4>
+
+<!-- Add Task Form -->
+<div class="p-3 rounded bg-light border mb-4">
+  <form action="/add" method="POST" class="row g-3">
+    <div class="col-md-12">
+      <label for="suggested" class="form-label">Choose a Suggested Task (optional):</label>
+      <select class="form-select mb-2" id="suggested" onchange="fillSuggestion(this)">
+        <option value="">-- Select a suggested insurance task --</option>
+        <option value="Review New Claim|Verify documentation and initiate claim approval process.">Review New Claim</option>
+        <option value="Follow Up With Client|Call client regarding missing documents or pending signature.">Follow Up With Client</option>
+        <option value="Update Policy Information|Modify policy terms or beneficiary details per request.">Update Policy Information</option>
+        <option value="Prepare Weekly Report|Compile data for management on claims, premiums, and leads.">Prepare Weekly Report</option>
+        <option value="Schedule Risk Assessment|Arrange an on-site evaluation for a high-value client.">Schedule Risk Assessment</option>
+        <option value="Send Renewal Reminders|Email clients about upcoming policy renewal deadlines.">Send Renewal Reminders</option>
+        <option value="Validate Premium Payment|Cross-check premium payment records for the current month.">Validate Premium Payment</option>
+        <option value="Submit Claim to Underwriter|Forward client claim and attached docs to underwriting team.">Submit Claim to Underwriter</option>
+      </select>
+    </div>
+
+    <div class="col-md-4">
+      <input type="text" id="title" name="title" class="form-control" placeholder="Title" required>
+    </div>
+    <div class="col-md-4">
+      <input type="text" id="description" name="description" class="form-control" placeholder="Description" required>
+    </div>
+    <div class="col-md-2">
+      <select name="status" class="form-select">
+        <option value="Pending">Pending</option>
+        <option value="In Progress">In Progress</option>
+        <option value="Completed">Completed</option>
+      </select>
+    </div>
+    <div class="col-md-2">
+      <button class="btn btn-primary w-100">Add Task</button>
+    </div>
+
+    <div class="col-md-3">
+      <input type="date" name="due_date" class="form-control" placeholder="Due Date">
+    </div>
+    <div class="col-md-3">
+      <select name="priority" class="form-select">
+        <option value="Low">Low</option>
+        <option value="Medium" selected>Medium</option>
+        <option value="High">High</option>
+      </select>
+    </div>
+    <div class="col-md-3">
+      <input type="text" name="assigned_to" class="form-control" placeholder="Assigned To">
+    </div>
+    <div class="col-md-3">
+      <select name="category" class="form-select">
+        <option value="">-- Category --</option>
+        <option value="Claims">Claims</option>
+        <option value="Underwriting">Underwriting</option>
+        <option value="Policy">Policy</option>
+        <option value="Client">Client</option>
+        <option value="Admin">Admin</option>
+      </select>
+    </div>
+
+    <div class="col-md-12">
+      <textarea name="notes" class="form-control" rows="2" placeholder="Additional Notes (optional)"></textarea>
+    </div>
+  </form>
+</div>
+
+<!-- ✅ Section header -->
+<h4 class="mb-3">📋 Task List</h4>
+
+<!-- Task Table -->
+<table class="table table-striped mt-2">
+  <thead>
+    <tr>
+      <th>Title</th>
+      <th>Status</th>
+      <th>Due Date</th>
+      <th>Priority</th>
+      <th>Assigned To</th>
+      <th>Category</th>
+      <th>Notes</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for task in tasks %}
+    <tr>
+      <td>{{ task.title }}</td>
+      <td>{{ task.status }}</td>
+      <td>{{ task.due_date }}</td>
+      <td>{{ task.priority }}</td>
+      <td>{{ task.assigned_to }}</td>
+      <td>{{ task.category }}</td>
+      <td>{{ task.notes }}</td>
+      <td>
+        <a href="{{ url_for('delete', id=task.id) }}" class="btn btn-danger btn-sm">Delete</a>
+        <button class="btn btn-warning btn-sm" type="button" onclick="toggleEditForm('{{ task.id }}')">Edit</button>
+      </td>
+    </tr>
+
+    <!-- Inline editable row -->
+    <tr id="editRow{{ task.id }}" style="display: none;">
+      <td colspan="8">
+        <form action="{{ url_for('update', id=task.id) }}" method="POST" class="row g-3">
+          <div class="col-md-6">
+            <input type="text" name="title" class="form-control" value="{{ task.title }}" required>
+          </div>
+          <div class="col-md-6">
+            <input type="text" name="description" class="form-control" value="{{ task.description }}" required>
+          </div>
+          <div class="col-md-4">
+            <select name="status" class="form-select">
+              <option value="Pending" {% if task.status == 'Pending' %}selected{% endif %}>Pending</option>
+              <option value="In Progress" {% if task.status == 'In Progress' %}selected{% endif %}>In Progress</option>
+              <option value="Completed" {% if task.status == 'Completed' %}selected{% endif %}>Completed</option>
+            </select>
+          </div>
+          <div class="col-md-4">
+            <input type="date" name="due_date" class="form-control" value="{{ task.due_date or '' }}">
+          </div>
+          <div class="col-md-4">
+            <select name="priority" class="form-select">
+              <option value="Low" {% if task.priority == 'Low' %}selected{% endif %}>Low</option>
+              <option value="Medium" {% if task.priority == 'Medium' %}selected{% endif %}>Medium</option>
+              <option value="High" {% if task.priority == 'High' %}selected{% endif %}>High</option>
+            </select>
+          </div>
+          <div class="col-md-6">
+            <input type="text" name="assigned_to" class="form-control" value="{{ task.assigned_to }}">
+          </div>
+          <div class="col-md-6">
+            <select name="category" class="form-select">
+              <option value="">-- Category --</option>
+              <option value="Claims" {% if task.category == 'Claims' %}selected{% endif %}>Claims</option>
+              <option value="Underwriting" {% if task.category == 'Underwriting' %}selected{% endif %}>Underwriting</option>
+              <option value="Policy" {% if task.category == 'Policy' %}selected{% endif %}>Policy</option>
+              <option value="Client" {% if task.category == 'Client' %}selected{% endif %}>Client</option>
+              <option value="Admin" {% if task.category == 'Admin' %}selected{% endif %}>Admin</option>
+            </select>
+          </div>
+          <div class="col-md-12">
+            <textarea name="notes" class="form-control" rows="2">{{ task.notes }}</textarea>
+          </div>
+          <div class="col-md-12 text-end">
+            <button type="submit" class="btn btn-success">Save</button>
+            <button type="button" class="btn btn-secondary" onclick="toggleEditForm('{{ task.id }}')">Cancel</button>
+          </div>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<!-- JavaScript -->
+<script>
+  function fillSuggestion(select) {
+    const selected = select.value;
+    if (!selected) return;
+    const [title, description] = selected.split('|');
+    document.getElementById('title').value = title;
+    document.getElementById('description').value = description;
+  }
+
+  // Auto-dismiss flash messages after 3 seconds
+  document.addEventListener("DOMContentLoaded", function () {
+    const alerts = document.querySelectorAll(".alert");
+    alerts.forEach(alert => {
+      setTimeout(() => {
+        alert.classList.remove("show");
+        alert.classList.add("fade");
+        setTimeout(() => alert.remove(), 500);
+      }, 3000);
+    });
+  });
+
+  function toggleEditForm(taskId) {
+    const row = document.getElementById(`editRow${taskId}`);
+    row.style.display = (row.style.display === "none") ? "table-row" : "none";
+  }
+</script>
+{% endblock %}
