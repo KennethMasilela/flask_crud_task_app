@@ -4,29 +4,16 @@ from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from dotenv import load_dotenv
 
-
-# Load environment variables
+# Load environment variables from .env file
 load_dotenv()
 
-# Initialize Flask app
+# Flask app config
 app = Flask(__name__)
-app.secret_key = os.getenv("SECRET_KEY", "fallback_dev_key")
-
-# Database configuration
-db_url = os.getenv("DATABASE_URL")
-
-# Render uses postgres:// which SQLAlchemy doesn't accept — fix if needed
-if db_url and db_url.startswith("postgres://"):
-    db_url = db_url.replace("postgres://", "postgresql://", 1)
-
-# Fallback to SQLite
-if not db_url:
-    db_url = "sqlite:///db.sqlite3"
-
-app.config['SQLALCHEMY_DATABASE_URI'] = db_url
+app.secret_key = os.environ.get("SECRET_KEY", "fallback_dev_key")
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get("DATABASE_URL", "sqlite:///db.sqlite3")
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# Initialize SQLAlchemy
+# Database and Migrations
 db = SQLAlchemy(app)
 
 # Models
@@ -162,7 +149,6 @@ def logout():
 
 # Entry point
 if __name__ == '__main__':
-    if os.environ.get("FLASK_ENV") != "production":
-        with app.app_context():
-            db.create_all()
-        app.run(debug=True)
+    with app.app_context():
+        db.create_all()  
+    app.run(debug=True)
